@@ -1,0 +1,37 @@
+services:
+  # This is the BidMyAsset INDIA website — a fully independent system with
+  # its own PocketBase database. It knows nothing about the Vietnam site;
+  # if you also run the Vietnam zip (on this same server or a different
+  # one), it has its own completely separate copy of these two containers
+  # and its own database. Nothing is shared between them.
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile.pocketbase
+    restart: unless-stopped
+    volumes:
+      # Named volume = the SQLite database lives here and survives
+      # rebuilds/restarts of the container.
+      - pb_data:/pb/pb_data
+    ports:
+      # PocketBase's own admin dashboard — http://localhost:8090/_/
+      # Safe to remove in production if you don't need remote access to it.
+      - "8090:8090"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - pocketbase
+    environment:
+      # Inside the Docker network, containers reach each other by service
+      # name — so "pocketbase" resolves to the container above.
+      PB_URL: "http://pocketbase:8090"
+      SITE_COUNTRY: "india"
+    ports:
+      - "8000:80"
+
+volumes:
+  pb_data:
